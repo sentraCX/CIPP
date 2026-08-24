@@ -1,12 +1,12 @@
-import { Layout as DashboardLayout } from "/src/layouts/index.js";
-import { CippTablePage } from "/src/components/CippComponents/CippTablePage.jsx";
-import { Button } from "@mui/material";
-import Link from "next/link";
-import { AddBusiness, Edit, Block, LockOpen, Key } from "@mui/icons-material";
+import { Layout as DashboardLayout } from "../../../../../layouts/index.js";
+import { CippTablePage } from "../../../../../components/CippComponents/CippTablePage.jsx";
+import { Edit, Block, LockOpen, Key } from "@mui/icons-material";
 import { TrashIcon } from "@heroicons/react/24/outline";
+import { CippAddEquipmentDrawer } from "../../../../../components/CippComponents/CippAddEquipmentDrawer";
 
 const Page = () => {
   const pageTitle = "Equipment";
+  const cardButtonPermissions = ["Exchange.Equipment.ReadWrite"];
 
   const actions = [
     {
@@ -14,7 +14,9 @@ const Page = () => {
       link: `/email/resources/management/equipment/edit?equipmentId=[ExternalDirectoryObjectId]`,
       icon: <Edit />,
       color: "info",
-      condition: (row) => !row.isDirSynced,
+      // ListEquipment returns the raw Get-Mailbox object, so these are PascalCase like the
+      // columns below - reading row.isDirSynced here is always undefined and never gates.
+      condition: (row) => !row.IsDirSynced,
     },
     {
       label: "Edit permissions",
@@ -30,7 +32,7 @@ const Page = () => {
       data: { ID: "ExternalDirectoryObjectId" },
       confirmText: "Are you sure you want to block the sign-in for this equipment mailbox?",
       multiPost: false,
-      condition: (row) => !row.isDirSynced,
+      condition: (row) => !row.AccountDisabled && !row.IsDirSynced,
     },
     {
       label: "Unblock Sign In",
@@ -40,7 +42,7 @@ const Page = () => {
       data: { ID: "ExternalDirectoryObjectId", Enable: true },
       confirmText: "Are you sure you want to unblock sign-in for this equipment mailbox?",
       multiPost: false,
-      condition: (row) => !row.isDirSynced,
+      condition: (row) => row.AccountDisabled && !row.IsDirSynced,
     },
     {
       label: "Delete Equipment",
@@ -50,8 +52,15 @@ const Page = () => {
       data: { ID: "ExternalDirectoryObjectId" },
       confirmText: "Are you sure you want to delete this equipment mailbox?",
       multiPost: false,
-      condition: (row) => !row.isDirSynced,
+      condition: (row) => !row.IsDirSynced,
     },
+  ];
+
+  const simpleColumns = [
+    "DisplayName",
+    "UserPrincipalName",
+    "HiddenFromAddressListsEnabled",
+    "PrimarySmtpAddress",
   ];
 
   return (
@@ -59,25 +68,12 @@ const Page = () => {
       title={pageTitle}
       apiUrl="/api/ListEquipment"
       actions={actions}
-      simpleColumns={[
-        "DisplayName",
-        "UserPrincipalName",
-        "HiddenFromAddressListsEnabled",
-        "PrimarySmtpAddress",
-      ]}
-      cardButton={
-        <Button
-          component={Link}
-          href="/email/resources/management/equipment/add"
-          startIcon={<AddBusiness />}
-        >
-          Add Equipment
-        </Button>
-      }
+      simpleColumns={simpleColumns}
+      cardButton={<CippAddEquipmentDrawer requiredPermissions={cardButtonPermissions} />}
     />
   );
 };
 
-Page.getLayout = (page) => <DashboardLayout>{page}</DashboardLayout>;
+Page.getLayout = (page) => <DashboardLayout allTenantsSupport={false}>{page}</DashboardLayout>;
 
 export default Page;
